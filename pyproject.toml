@@ -8,6 +8,7 @@ authors = ["mr.Robot <zanid227@yandex.ru>"]
 python = ">=3.11.0,<3.12"
 fastapi = "^0.115.11"
 uvicorn = "^0.34.0"
+dependency-injector = "^4.46.0"
 
 
 [build-system]
