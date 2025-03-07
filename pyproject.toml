@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "ziiot-api-core"
+version = "0.1.0"
+description = ""
+authors = ["mr.Robot <zanid227@yandex.ru>"]
+
+[tool.poetry.dependencies]
+python = ">=3.11.0,<3.12"
+fastapi = "^0.115.11"
+uvicorn = "^0.34.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
