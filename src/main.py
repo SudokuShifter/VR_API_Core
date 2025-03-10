@@ -6,15 +6,16 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from containers.config_containers import ConfigContainer
+from csv_loader.routers import router
 
-@asynccontextmanager
-async def lifespan(_application: FastAPI) -> AsyncGenerator:
-    config_container = ConfigContainer()
-    config_container.wire(packages=[__name__, 'influx_service', 'path_config'])
-    yield
+# @asynccontextmanager
+# async def lifespan(_application: FastAPI) -> AsyncGenerator:
+#     config_container = ConfigContainer()
+#     config_container.wire(packages=[__name__, 'influx_service', 'path_config'])
+#     yield
 
-app = FastAPI(lifespan=lifespan)
-app.include_router(...)
+app = FastAPI()
+app.include_router(router, prefix='/api')
 
 app.add_middleware(
     CORSMiddleware,

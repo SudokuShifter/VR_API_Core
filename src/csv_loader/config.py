@@ -6,4 +6,3 @@ class InfluxDBConfig(BaseSettings):
     DB_ORG: str = Field(...)
     DB_URL: str = Field(...)
     DB_TOKEN: str = Field(...)
-
