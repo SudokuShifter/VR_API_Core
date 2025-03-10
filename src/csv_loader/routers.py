@@ -21,10 +21,11 @@ async def csv_load_single(
 @router.post("/fill_influx_archive_csv", description="CSV file")
 async def csv_load_archive(
         csv_service: CSVService,
+        influx_service: InfluxDBService,
         file: UploadFile = File(...)
 ):
     await csv_service.unpack_files_from_archive(file)
-
+    await influx_service.fill_data()
 
 
 @router.get("/get_data_for_id")

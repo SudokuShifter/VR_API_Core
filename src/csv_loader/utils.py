@@ -10,7 +10,7 @@ async def read_csv(
         storage: str
 ) -> DataFrame:
     tmp_storage = os.walk(storage)
-    for file in tmp_storage:
-        print(file)
-        # data = pd.read_csv(file, header=None, delimiter=',', engine='python')
-        # print(data)
+    for folder, _, files in tmp_storage:
+        for file in files:
+            data = pd.read_csv(file, header=None, delimiter=',', engine='python')
+            print(data)
