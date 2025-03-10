@@ -26,4 +26,4 @@ async def csv_load_archive(
 
 @router.get("/get_data_for_id")
 async def get_data(_id: int):
-    pass
+    ...
