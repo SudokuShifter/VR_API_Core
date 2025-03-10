@@ -1,6 +1,8 @@
+import datetime
 import os
 from pathlib import Path
 import shutil
+from typing import Optional
 
 import zipfile
 import patoolib
@@ -11,9 +13,6 @@ from fastapi_storages import FileSystemStorage
 from influxdb_client import InfluxDBClient
 from influxdb_client.client.write_api import SYNCHRONOUS
 
-
-from typing import Optional
-
 from containers.config_containers import ConfigContainer
 from csv_loader.config import InfluxDBConfig
 from csv_loader.utils import read_csv
@@ -23,7 +22,6 @@ class CoreResponse:
     """
     Core-класс для создания метода генерации ответа от сервера для reg_auth роутера
     """
-
     @staticmethod
     async def make_response(
             success: bool,
@@ -37,7 +35,6 @@ class CoreResponse:
         )
 
 
-
 class CSVService(CoreResponse):
     """
     Service-класс для реализации основного функционала для работы с csv-файлами:
@@ -45,14 +42,17 @@ class CSVService(CoreResponse):
     - Очищение загруженных файлов
     - Распаковка архивов с csv-файлами
     """
-    HEADER_LIST = ['date', 'indicator']
-
     def __init__(
             self,
             storage: FileSystemStorage
     ):
         self.storage = storage
         self.storage_path = self.storage._path
+
+
+    async def clear_folder_and_create(self):
+        shutil.rmtree(self.storage_path, ignore_errors=True)
+        os.mkdir(self.storage_path)
 
 
     async def csv_loader(
@@ -67,6 +67,7 @@ class CSVService(CoreResponse):
                 status_code=400)
 
         try:
+            await self.clear_folder_and_create()
             self.storage.write(file.file, name=file.filename)
             return await self.make_response(
                 success=True,
@@ -100,11 +101,6 @@ class CSVService(CoreResponse):
             return await self.unpack_zip_folder_with_csvs(temp_path)
         else:
             return await self.unpack_rar_folder_with_csvs(temp_path)
-
-
-    async def clear_folder_and_create(self):
-        shutil.rmtree(self.storage_path, ignore_errors=True)
-        os.mkdir(self.storage_path)
 
 
     async def unpack_zip_folder_with_csvs(
@@ -143,6 +139,8 @@ class InfluxDBService(CoreResponse):
     - Загрузка данных
     - Получение данных
     """
+    HEADER_LIST = ['date', 'indicator']
+
     def __init__(
             self,
             storage: FileSystemStorage,
@@ -156,5 +154,10 @@ class InfluxDBService(CoreResponse):
     async def fill_data(
             self,
     ) -> Optional[str]:
-        await read_csv(storage=self.storage_path)
+        print(datetime.datetime.now())
+        df_list = await read_csv(storage=self.storage_path, header_list=self.HEADER_LIST)
+        for df in df_list:
+            print(datetime.datetime.now())
+
+
 
