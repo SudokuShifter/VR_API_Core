@@ -5,19 +5,18 @@ import shutil
 import zipfile
 import patoolib
 from dependency_injector.wiring import Provide
-from fastapi import File, UploadFile
+from fastapi import UploadFile
+from fastapi.responses import JSONResponse
 from fastapi_storages import FileSystemStorage
-from fastapi.exceptions import HTTPException
 from influxdb_client import InfluxDBClient
-from influxdb_client.client.write_api import SYNCHRONOUS, WriteApi
-import pandas as pd
+from influxdb_client.client.write_api import SYNCHRONOUS
 
-from typing import Any, Union, Optional
 
+from typing import Optional
 
 from containers.config_containers import ConfigContainer
 from csv_loader.config import InfluxDBConfig
-from starlette.responses import JSONResponse
+from csv_loader.utils import read_csv
 
 
 class CoreResponse:
@@ -86,7 +85,6 @@ class CSVService(CoreResponse):
             self,
             file: UploadFile
     ) -> JSONResponse:
-
         if not file.filename.endswith(('.zip', '.rar')):
             return await self.make_response(
                 success=False,
@@ -94,7 +92,6 @@ class CSVService(CoreResponse):
                 status_code=400)
 
         await self.clear_folder_and_create()
-
         ext = file.filename.split('.')[-1]
         self.storage.write(file.file, name=f'temp.{ext}')
 
@@ -148,15 +145,16 @@ class InfluxDBService(CoreResponse):
     """
     def __init__(
             self,
+            storage: FileSystemStorage,
             config: InfluxDBConfig = Provide[ConfigContainer.influxdb_config]
     ):
+        self.storage_path = storage._path
         self.client = InfluxDBClient(url=config.DB_URL, org=config.DB_ORG, token=config.DB_TOKEN)
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
 
 
     async def fill_data(
             self,
-            data: str
     ) -> Optional[str]:
-        print(self.client)
-        print(self.write_api)
+        await read_csv(storage=self.storage_path)
+

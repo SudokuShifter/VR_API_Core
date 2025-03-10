@@ -1,11 +1,12 @@
 import os
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
 from dependency_injector import containers, providers
-from influxdb_client import InfluxDBClient
-from influxdb_client.client.write_api import SYNCHRONOUS
 
 from csv_loader.config import InfluxDBConfig
+
+
+load_dotenv()
 
 
 class ConfigContainer(containers.DeclarativeContainer):

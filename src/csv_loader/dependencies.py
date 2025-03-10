@@ -14,7 +14,7 @@ async def get_scv_service() -> CSVService:
 
 
 async def get_infludb_service() -> InfluxDBService:
-    return InfluxDBService()
+    return InfluxDBService(storage=storage)
 
 
 CSVService = Annotated[CSVService, Depends(get_scv_service)]
