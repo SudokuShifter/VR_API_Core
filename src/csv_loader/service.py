@@ -2,7 +2,6 @@ import datetime
 import os
 from pathlib import Path
 import shutil
-import asyncio
 from typing import Tuple
 
 import zipfile
@@ -55,18 +54,42 @@ class CSVService(CoreResponse):
         self.storage = storage
         self.storage_path = self.storage._path
 
-    def clear_folder_and_create(self):
+    def csv_loader(
+            self,
+            file: UploadFile,
+    ) -> JSONResponse:
+
+        self.clear_folder_and_create()
+        self.storage.write(file.file, name=file.filename)
+        return self.make_response(
+            success=True,
+            detail='File successfully saved',
+            status_code=201
+        )
+
+
+    def clear_folder_and_create(
+            self
+    ):
 
         shutil.rmtree(self.storage_path, ignore_errors=True)
         os.mkdir(self.storage_path)
 
 
-    def tmp_file_data(self, file: UploadFile) -> Tuple[str, Path]:
+    def tmp_file_data(
+            self,
+            file: UploadFile
+    ) -> Tuple[str, Path]:
+
         ext = file.filename.split('.')[-1]
         return ext, Path(f'{self.storage_path}/temp.{ext}')
 
 
-    def save_file(self, file: UploadFile):
+    def save_file(
+            self,
+            file: UploadFile
+    ):
+
         if not file.filename.endswith(('.zip', '.rar')):
             return self.make_response(
                 success=False,
@@ -80,7 +103,11 @@ class CSVService(CoreResponse):
             shutil.copyfileobj(file.file, buffer)
 
 
-    def unpack_files_from_archive(self, file: UploadFile) -> JSONResponse:
+    def unpack_files_from_archive(
+            self,
+            file: UploadFile
+    ) -> JSONResponse:
+
         ext, destination = self.tmp_file_data(file)
         if ext == 'zip':
             return self.unpack_zip_folder_with_csvs(destination)
@@ -88,7 +115,11 @@ class CSVService(CoreResponse):
             return self.unpack_rar_folder_with_csvs(destination)
 
 
-    def unpack_zip_folder_with_csvs(self, temp_path: Path) -> JSONResponse:
+    def unpack_zip_folder_with_csvs(
+            self,
+            temp_path: Path
+    ) -> JSONResponse:
+
         with zipfile.ZipFile(temp_path, 'r') as zip_file:
             zip_file.extractall(self.storage_path)
 
@@ -100,8 +131,11 @@ class CSVService(CoreResponse):
         )
 
 
-    def unpack_rar_folder_with_csvs(self, temp_path: Path) -> JSONResponse:
-        print("unpack_rar_folder_with_csvs")
+    def unpack_rar_folder_with_csvs(
+            self,
+            temp_path: Path
+    ) -> JSONResponse:
+
         str_temp_path = str(temp_path)
         patoolib.extract_archive(archive=str_temp_path, outdir=self.storage_path)
         os.remove(str_temp_path)
@@ -136,7 +170,11 @@ class InfluxDBService(CoreResponse):
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
 
 
-    def choose_func(self, point, file):
+    def choose_func(
+            self,
+            point,
+            file
+    ):
         match point:
             case 1:
                 self.csv_service.csv_loader(file)
@@ -150,7 +188,6 @@ class InfluxDBService(CoreResponse):
             file: UploadFile,
     ) -> JSONResponse:
 
-        start = datetime.datetime.now()
         self.choose_func(point, file)
         df_list = convert_csv_to_dataframe(storage=self.storage_path,
                                  header_list=self.HEADER_LIST)
@@ -165,7 +202,7 @@ class InfluxDBService(CoreResponse):
                     data_frame_measurement_name='indicator',
                     data_frame_tag_columns=['ind_tag']
                 )
-        print(datetime.datetime.now() - start)
+        print('end fill data')
         return self.make_response(
             success=True,
             detail='Data successfully filled',
@@ -174,7 +211,11 @@ class InfluxDBService(CoreResponse):
 
 
 class InfluxDBRequestManager(InfluxDBService):
-
+    """
+    Manager-класс для реализации функционала для работы данными внутри базы данных InfluxDB:
+    - Получение данных
+    - Запись (запросом)
+    """
     async def get_full_data_by_id(
             self,
             ind_tag: str

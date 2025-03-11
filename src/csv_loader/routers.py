@@ -1,5 +1,4 @@
 from datetime import datetime
-from pathlib import Path
 
 from starlette.background import BackgroundTask
 from fastapi import (

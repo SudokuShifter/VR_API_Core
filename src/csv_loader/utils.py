@@ -1,7 +1,7 @@
 import os
-from uuid import uuid4, UUID
+from uuid import uuid4
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 import pandas as pd
 from fastapi import UploadFile
@@ -17,6 +17,8 @@ def check_file_type(file: UploadFile):
             return 1
         case "zip" | 'rar':
             return 2
+        case _:
+            return 3
 
 
 def convert_date(date: str) -> datetime:
@@ -27,7 +29,6 @@ def convert_csv_to_dataframe(
         storage: str,
         header_list: List[str],
 ) -> List[DataFrame]:
-    start = datetime.now()
     tmp_storage = os.walk(storage)
     df_list = []
     for root, _, files in tmp_storage:
@@ -42,5 +43,5 @@ def convert_csv_to_dataframe(
             data['date'] = data['date'].apply(convert_date)
             data['indicator'] = data['indicator'].astype('float64')
             df_list.append(data)
-    print(datetime.now() - start)
+    print('end convert csvs to dataframes')
     return df_list
