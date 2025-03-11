@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import shutil
+import asyncio
 
 import zipfile
 import patoolib
@@ -21,7 +22,7 @@ class CoreResponse:
     Core-класс для создания метода генерации ответа от сервера для reg_auth роутера
     """
     @staticmethod
-    async def make_response(
+    def make_response(
             success: bool,
             detail: str,
             status_code: int
@@ -59,7 +60,7 @@ class CSVService(CoreResponse):
     ) -> JSONResponse:
 
         if not file.filename.endswith('.csv'):
-            return await self.make_response(
+            return self.make_response(
                 success=False,
                 detail='Incorrect file type',
                 status_code=400)
@@ -67,14 +68,14 @@ class CSVService(CoreResponse):
         try:
             await self.clear_folder_and_create()
             self.storage.write(file.file, name=file.filename)
-            return await self.make_response(
+            return self.make_response(
                 success=True,
                 detail='File successfully saved',
                 status_code=201
             )
 
         except Exception as e:
-            return await self.make_response(
+            return self.make_response(
                 success=False,
                 detail=str(e),
                 status_code=400)
@@ -85,7 +86,7 @@ class CSVService(CoreResponse):
             file: UploadFile
     ) -> JSONResponse:
         if not file.filename.endswith(('.zip', '.rar')):
-            return await self.make_response(
+            return self.make_response(
                 success=False,
                 detail='Incorrect file type',
                 status_code=400)
@@ -110,7 +111,7 @@ class CSVService(CoreResponse):
             zip_file.extractall(self.storage_path)
 
         temp_path.unlink()
-        return await self.make_response(
+        return self.make_response(
             success=True,
             detail='files successfully extracted',
             status_code=201
@@ -124,7 +125,7 @@ class CSVService(CoreResponse):
         str_temp_path = str(temp_path)
         patoolib.extract_archive(archive=str_temp_path, outdir=self.storage_path)
         os.remove(str_temp_path)
-        return await self.make_response(
+        return self.make_response(
             success=True,
             detail='files successfully extracted',
             status_code=201
@@ -146,22 +147,30 @@ class InfluxDBService(CoreResponse):
     ):
         self.storage_path = storage._path
         self.client = InfluxDBClient(url=config.DB_URL, org=config.DB_ORG, token=config.DB_TOKEN)
+        self.query_api = self.client.query_api()
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
 
 
     async def fill_data(
             self,
-            bucket_name: str,
     ) -> JSONResponse:
-        df_list = await read_csv(storage=self.storage_path, header_list=self.HEADER_LIST)
-        bucket_names = []
-        points = []
-        for bucket_name, df in df_list:
-            df.set_index('date')
-            self.write_api.write(bucket=bucket_name, record=df)
-        return await self.make_response(
+        df_list = await read_csv(storage=self.storage_path,
+                                 header_list=self.HEADER_LIST)
+        for df in df_list:
+            print(df)
+            df.set_index('date', inplace=True)
+            try:
+                self.write_api.write(bucket='test', record=df,
+                                     data_frame_measurement_name='indicator')
+                await asyncio.sleep(0.1)
+            except Exception as e:
+                print(e)
+        return self.make_response(
             success=True,
             detail='Data successfully filled',
             status_code=201
         )
+
+    async def get_data(self):
+        result = self.query_api.query(f'from(bucket: "test/autogen") |> range(start: -3y)')
 

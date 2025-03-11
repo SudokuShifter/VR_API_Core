@@ -6,7 +6,6 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from containers.config_containers import ConfigContainer
-from csv_loader.dependencies import InfluxDBService, CSVService
 from csv_loader.routers import router
 
 
