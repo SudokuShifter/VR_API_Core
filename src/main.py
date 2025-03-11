@@ -5,7 +5,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from containers.config_containers import ConfigContainer
+from containers.config_containers import (
+    ConfigContainer,
+    RequestContainer
+)
 from csv_loader.routers import router
 
 
@@ -13,6 +16,8 @@ from csv_loader.routers import router
 async def lifespan(_application: FastAPI) -> AsyncGenerator:
     config_container = ConfigContainer()
     config_container.wire(packages=[__name__, 'csv_loader'])
+    request_container = RequestContainer()
+    request_container.wire(packages=[__name__, 'csv_loader'])
     yield
 
 app = FastAPI(lifespan=lifespan)

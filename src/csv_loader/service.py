@@ -1,3 +1,4 @@
+import datetime
 import os
 from pathlib import Path
 import shutil
@@ -12,9 +13,17 @@ from fastapi_storages import FileSystemStorage
 from influxdb_client import InfluxDBClient
 from influxdb_client.client.write_api import SYNCHRONOUS
 
-from containers.config_containers import ConfigContainer
+from containers.config_containers import (
+    ConfigContainer,
+    RequestContainer
+)
 from csv_loader.config import InfluxDBConfig
-from csv_loader.utils import read_csv
+
+from csv_loader.utils import (
+    convert_csv_to_dataframe,
+    convert_date
+)
+from pandas import DataFrame
 
 
 class CoreResponse:
@@ -143,11 +152,14 @@ class InfluxDBService(CoreResponse):
     def __init__(
             self,
             storage: FileSystemStorage,
-            config: InfluxDBConfig = Provide[ConfigContainer.influxdb_config]
+            config: InfluxDBConfig = Provide[ConfigContainer.influxdb_config],
+            request_manager: RequestContainer = Provide[RequestContainer.request_manager]
     ):
         self.storage_path = storage._path
+        self.config = config
         self.client = InfluxDBClient(url=config.DB_URL, org=config.DB_ORG,
                                      token=config.DB_TOKEN, bucket=config.DB_BUCKET_NAME)
+        self.request_manager = request_manager
         self.query_api = self.client.query_api()
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
 
@@ -155,23 +167,87 @@ class InfluxDBService(CoreResponse):
     async def fill_data(
             self,
     ) -> JSONResponse:
-        df_list = await read_csv(storage=self.storage_path,
+        start = datetime.datetime.now()
+        df_list = await convert_csv_to_dataframe(storage=self.storage_path,
                                  header_list=self.HEADER_LIST)
         for df in df_list:
-            print(df)
             df.set_index('date', inplace=True)
-            try:
-                self.write_api.write(bucket='test', record=df,
-                                     data_frame_measurement_name='indicator')
-                await asyncio.sleep(0.1)
-            except Exception as e:
-                print(e)
+            chunk_size = 10000
+            for i in range(0, len(df), chunk_size):
+                chunk = df.iloc[i:i + chunk_size]
+                self.write_api.write(
+                    bucket=self.config.DB_BUCKET_NAME,
+                    record=chunk,
+                    data_frame_measurement_name='indicator',
+                    data_frame_tag_columns=['ind_tag']
+                )
+        print(datetime.datetime.now() - start)
         return self.make_response(
             success=True,
             detail='Data successfully filled',
             status_code=201
         )
 
-    async def get_data(self):
-        result = self.query_api.query(f'from(bucket: "test/autogen") |> range(start: -3y)')
 
+    async def get_full_data_by_id(
+            self,
+            ind_tag: str
+    ):
+        result = self.query_api.query(self.request_manager.FULL_DATA_BY_TAG.format(
+            ind_tag
+        ))
+        return self.make_response(
+            success=True,
+            detail=str(result),
+            status_code=200
+        )
+
+
+    async def get_data_by_range(
+            self,
+            date_start: datetime.datetime,
+            date_end: datetime.datetime,
+            ind_tag: str,
+    ):
+        result = self.query_api.query(self.request_manager.DATA_FOR_RANGE_BY_TAG.format(
+            date_start,
+            date_end,
+            ind_tag
+        ))
+        return self.make_response(
+            success=True,
+            detail=str(result),
+            status_code=200
+        )
+
+
+    async def get_data_before_date(
+            self,
+            date_end: datetime.datetime,
+            ind_tag: str,
+    ):
+        result = self.query_api.query(self.request_manager.DATA_BEFORE_DATE.format(
+            date_end,
+            ind_tag
+        ))
+        return self.make_response(
+            success=True,
+            detail=str(result),
+            status_code=200
+        )
+
+
+    async def get_data_after_date(
+            self,
+            date_start: datetime.datetime,
+            ind_tag: str,
+    ):
+        result = self.query_api.query(self.request_manager.DATA_AFTER_DATE.format(
+            date_start,
+            ind_tag
+        ))
+        return self.make_response(
+            success=True,
+            detail=str(result),
+            status_code=200
+        )
