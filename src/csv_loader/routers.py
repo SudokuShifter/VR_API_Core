@@ -1,8 +1,9 @@
 from fastapi import APIRouter, UploadFile, File
-from fastapi.exceptions import HTTPException
-from typing import List
 
-from csv_loader.dependencies import CSVService, InfluxDBService
+from csv_loader.dependencies import (
+    CSVService,
+    InfluxDBService
+)
 
 
 router = APIRouter()

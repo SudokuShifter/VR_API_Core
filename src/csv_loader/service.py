@@ -146,7 +146,8 @@ class InfluxDBService(CoreResponse):
             config: InfluxDBConfig = Provide[ConfigContainer.influxdb_config]
     ):
         self.storage_path = storage._path
-        self.client = InfluxDBClient(url=config.DB_URL, org=config.DB_ORG, token=config.DB_TOKEN)
+        self.client = InfluxDBClient(url=config.DB_URL, org=config.DB_ORG,
+                                     token=config.DB_TOKEN, bucket=config.DB_BUCKET_NAME)
         self.query_api = self.client.query_api()
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
 

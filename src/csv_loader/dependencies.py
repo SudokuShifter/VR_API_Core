@@ -3,7 +3,10 @@ from typing import Annotated
 from fastapi_storages import FileSystemStorage
 from fastapi import Depends
 
-from csv_loader.service import CSVService, InfluxDBService
+from csv_loader.service import (
+    CSVService,
+    InfluxDBService
+)
 
 
 storage = FileSystemStorage(path='./tmp')

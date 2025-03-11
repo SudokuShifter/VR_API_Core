@@ -2,8 +2,6 @@ import os
 from datetime import datetime
 from typing import List
 
-from fastapi_storages import FileSystemStorage
-
 import pandas as pd
 from pandas import DataFrame
 
@@ -15,7 +13,7 @@ def convert_date(date: str) -> datetime:
 async def read_csv(
         storage: str,
         header_list: List[str],
-) -> List:
+) -> List[DataFrame]:
     tmp_storage = os.walk(storage)
     df_list = []
     for root, _, files in tmp_storage:
