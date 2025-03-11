@@ -4,14 +4,26 @@ from datetime import datetime
 from typing import List, Optional
 
 import pandas as pd
+from fastapi import UploadFile
 from pandas import DataFrame
+
+
+def check_file_type(file: UploadFile):
+    file_ext = file.filename.rsplit('.', 1)[-1]
+    if not file.filename.endswith(('.zip', '.rar', '.csv')):
+        raise Exception("Incorrect file type")
+    match file_ext:
+        case "csv":
+            return 1
+        case "zip" | 'rar':
+            return 2
 
 
 def convert_date(date: str) -> datetime:
     return datetime.strptime(date, '%d-%b-%y %H:%M:%S.%f')
 
 
-async def convert_csv_to_dataframe(
+def convert_csv_to_dataframe(
         storage: str,
         header_list: List[str],
 ) -> List[DataFrame]:

@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import shutil
 import asyncio
+from typing import Tuple
 
 import zipfile
 import patoolib
@@ -23,7 +24,6 @@ from csv_loader.utils import (
     convert_csv_to_dataframe,
     convert_date
 )
-from pandas import DataFrame
 
 
 class CoreResponse:
@@ -50,93 +50,64 @@ class CSVService(CoreResponse):
     - Очищение загруженных файлов
     - Распаковка архивов с csv-файлами
     """
-    def __init__(
-            self,
-            storage: FileSystemStorage
-    ):
+
+    def __init__(self, storage: FileSystemStorage):
         self.storage = storage
         self.storage_path = self.storage._path
 
+    def clear_folder_and_create(self):
 
-    async def clear_folder_and_create(self):
         shutil.rmtree(self.storage_path, ignore_errors=True)
         os.mkdir(self.storage_path)
 
 
-    async def csv_loader(
-            self,
-            file: UploadFile,
-    ) -> JSONResponse:
-
-        if not file.filename.endswith('.csv'):
-            return self.make_response(
-                success=False,
-                detail='Incorrect file type',
-                status_code=400)
-
-        try:
-            await self.clear_folder_and_create()
-            self.storage.write(file.file, name=file.filename)
-            return self.make_response(
-                success=True,
-                detail='File successfully saved',
-                status_code=201
-            )
-
-        except Exception as e:
-            return self.make_response(
-                success=False,
-                detail=str(e),
-                status_code=400)
+    def tmp_file_data(self, file: UploadFile) -> Tuple[str, Path]:
+        ext = file.filename.split('.')[-1]
+        return ext, Path(f'{self.storage_path}/temp.{ext}')
 
 
-    async def unpack_files_from_archive(
-            self,
-            file: UploadFile
-    ) -> JSONResponse:
+    def save_file(self, file: UploadFile):
         if not file.filename.endswith(('.zip', '.rar')):
             return self.make_response(
                 success=False,
                 detail='Incorrect file type',
                 status_code=400)
 
-        await self.clear_folder_and_create()
-        ext = file.filename.split('.')[-1]
-        self.storage.write(file.file, name=f'temp.{ext}')
+        self.clear_folder_and_create()
+        ext, destination = self.tmp_file_data(file)
 
-        temp_path = Path(f'{self.storage_path}/temp.{ext}')
+        with open(destination, 'wb') as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+
+    def unpack_files_from_archive(self, file: UploadFile) -> JSONResponse:
+        ext, destination = self.tmp_file_data(file)
         if ext == 'zip':
-            return await self.unpack_zip_folder_with_csvs(temp_path)
+            return self.unpack_zip_folder_with_csvs(destination)
         else:
-            return await self.unpack_rar_folder_with_csvs(temp_path)
+            return self.unpack_rar_folder_with_csvs(destination)
 
 
-    async def unpack_zip_folder_with_csvs(
-            self,
-            temp_path: Path
-    ) -> JSONResponse:
-
+    def unpack_zip_folder_with_csvs(self, temp_path: Path) -> JSONResponse:
         with zipfile.ZipFile(temp_path, 'r') as zip_file:
             zip_file.extractall(self.storage_path)
 
         temp_path.unlink()
         return self.make_response(
             success=True,
-            detail='files successfully extracted',
+            detail='Files successfully extracted',
             status_code=201
         )
 
 
-    async def unpack_rar_folder_with_csvs(
-            self,
-            temp_path: Path
-    ) -> JSONResponse:
+    def unpack_rar_folder_with_csvs(self, temp_path: Path) -> JSONResponse:
+        print("unpack_rar_folder_with_csvs")
         str_temp_path = str(temp_path)
         patoolib.extract_archive(archive=str_temp_path, outdir=self.storage_path)
         os.remove(str_temp_path)
         return self.make_response(
             success=True,
-            detail='files successfully extracted',
+            detail='Files successfully extracted',
             status_code=201
         )
 
@@ -153,22 +124,35 @@ class InfluxDBService(CoreResponse):
             self,
             storage: FileSystemStorage,
             config: InfluxDBConfig = Provide[ConfigContainer.influxdb_config],
-            request_manager: RequestContainer = Provide[RequestContainer.request_manager]
+            request_manager: RequestContainer = Provide[RequestContainer.request_manager],
     ):
         self.storage_path = storage._path
         self.config = config
         self.client = InfluxDBClient(url=config.DB_URL, org=config.DB_ORG,
                                      token=config.DB_TOKEN, bucket=config.DB_BUCKET_NAME)
+        self.csv_service = CSVService(storage)
         self.request_manager = request_manager
         self.query_api = self.client.query_api()
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
 
 
-    async def fill_data(
+    def choose_func(self, point, file):
+        match point:
+            case 1:
+                self.csv_service.csv_loader(file)
+            case 2:
+                self.csv_service.unpack_files_from_archive(file)
+
+
+    def fill_data(
             self,
+            point: int,
+            file: UploadFile,
     ) -> JSONResponse:
+
         start = datetime.datetime.now()
-        df_list = await convert_csv_to_dataframe(storage=self.storage_path,
+        self.choose_func(point, file)
+        df_list = convert_csv_to_dataframe(storage=self.storage_path,
                                  header_list=self.HEADER_LIST)
         for df in df_list:
             df.set_index('date', inplace=True)
@@ -189,12 +173,15 @@ class InfluxDBService(CoreResponse):
         )
 
 
+class InfluxDBRequestManager(InfluxDBService):
+
     async def get_full_data_by_id(
             self,
             ind_tag: str
     ):
-        result = self.query_api.query(self.request_manager.FULL_DATA_BY_TAG.format(
-            ind_tag
+        result = self.query_api.query(
+            self.request_manager.FULL_DATA_BY_TAG.format(
+                ind_tag
         ))
         return self.make_response(
             success=True,
@@ -209,10 +196,11 @@ class InfluxDBService(CoreResponse):
             date_end: datetime.datetime,
             ind_tag: str,
     ):
-        result = self.query_api.query(self.request_manager.DATA_FOR_RANGE_BY_TAG.format(
-            date_start,
-            date_end,
-            ind_tag
+        result = self.query_api.query(
+            self.request_manager.DATA_FOR_RANGE_BY_TAG.format(
+                date_start,
+                date_end,
+                ind_tag
         ))
         return self.make_response(
             success=True,
@@ -226,9 +214,10 @@ class InfluxDBService(CoreResponse):
             date_end: datetime.datetime,
             ind_tag: str,
     ):
-        result = self.query_api.query(self.request_manager.DATA_BEFORE_DATE.format(
-            date_end,
-            ind_tag
+        result = self.query_api.query(
+            self.request_manager.DATA_BEFORE_DATE.format(
+                date_end,
+                ind_tag
         ))
         return self.make_response(
             success=True,
@@ -242,9 +231,10 @@ class InfluxDBService(CoreResponse):
             date_start: datetime.datetime,
             ind_tag: str,
     ):
-        result = self.query_api.query(self.request_manager.DATA_AFTER_DATE.format(
-            date_start,
-            ind_tag
+        result = self.query_api.query(
+            self.request_manager.DATA_AFTER_DATE.format(
+                date_start,
+                ind_tag
         ))
         return self.make_response(
             success=True,
