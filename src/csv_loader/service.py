@@ -1,8 +1,6 @@
-import datetime
 import os
 from pathlib import Path
 import shutil
-from typing import Optional
 
 import zipfile
 import patoolib
@@ -153,11 +151,17 @@ class InfluxDBService(CoreResponse):
 
     async def fill_data(
             self,
-    ) -> Optional[str]:
-        print(datetime.datetime.now())
+            bucket_name: str,
+    ) -> JSONResponse:
         df_list = await read_csv(storage=self.storage_path, header_list=self.HEADER_LIST)
-        for df in df_list:
-            print(datetime.datetime.now())
-
-
+        bucket_names = []
+        points = []
+        for bucket_name, df in df_list:
+            df.set_index('date')
+            self.write_api.write(bucket=bucket_name, record=df)
+        return await self.make_response(
+            success=True,
+            detail='Data successfully filled',
+            status_code=201
+        )
 
