@@ -21,7 +21,7 @@ async def lifespan(_application: FastAPI) -> AsyncGenerator:
     yield
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(router, prefix='/api')
+app.include_router(router, prefix='/api', tags=['ZIIOT-API-CORE'])
 
 
 app.add_middleware(
