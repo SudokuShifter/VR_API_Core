@@ -10,7 +10,6 @@ from fastapi import (
     Query,
 )
 
-
 from csv_loader.utils import check_file_type
 from csv_loader.schemas import (
     RequestDataWithDateRangeSchema,
@@ -21,7 +20,6 @@ from csv_loader.dependencies import (
     InfluxDBService,
     InfluxDBRequestManager
 )
-
 
 
 router = APIRouter()

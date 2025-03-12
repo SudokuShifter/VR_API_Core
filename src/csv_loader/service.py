@@ -54,19 +54,6 @@ class CSVService(CoreResponse):
         self.storage = storage
         self.storage_path = self.storage._path
 
-    def csv_loader(
-            self,
-            file: UploadFile,
-    ) -> JSONResponse:
-
-        self.clear_folder_and_create()
-        self.storage.write(file.file, name=file.filename)
-        return self.make_response(
-            success=True,
-            detail='File successfully saved',
-            status_code=201
-        )
-
 
     def clear_folder_and_create(
             self
@@ -87,10 +74,10 @@ class CSVService(CoreResponse):
 
     def save_file(
             self,
-            file: UploadFile
+            file: UploadFile,
     ):
 
-        if not file.filename.endswith(('.zip', '.rar')):
+        if not file.filename.endswith(('.zip', '.rar', '.csv')):
             return self.make_response(
                 success=False,
                 detail='Incorrect file type',
@@ -170,25 +157,15 @@ class InfluxDBService(CoreResponse):
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
 
 
-    def choose_func(
-            self,
-            point,
-            file
-    ):
-        match point:
-            case 1:
-                self.csv_service.csv_loader(file)
-            case 2:
-                self.csv_service.unpack_files_from_archive(file)
-
-
     def fill_data(
             self,
             point: int,
             file: UploadFile,
     ) -> JSONResponse:
 
-        self.choose_func(point, file)
+        if point == 2:
+            self.csv_service.unpack_files_from_archive(file)
+
         df_list = convert_csv_to_dataframe(storage=self.storage_path,
                                  header_list=self.HEADER_LIST)
         for df in df_list:
@@ -202,7 +179,7 @@ class InfluxDBService(CoreResponse):
                     data_frame_measurement_name='indicator',
                     data_frame_tag_columns=['ind_tag']
                 )
-        print('end fill data')
+
         return self.make_response(
             success=True,
             detail='Data successfully filled',
