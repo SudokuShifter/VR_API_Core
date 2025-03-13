@@ -73,11 +73,11 @@ async def get_data_by_uuid_and_range(
             )
 async def get_data_after_date(
         influx_request_manager: InfluxDBRequestManager,
-        date_end: datetime = Query(..., description="2021-01-01T00:00:00Z"),
+        date_start: datetime = Query(..., description="2021-01-01T00:00:00Z"),
         uuid: str = Query(...),
 ):
-    date_end = date_end.strftime('%Y-%m-%dT%H:%M:%SZ')
-    return await influx_request_manager.get_data_after_date(date_end, uuid)
+    date_start_str = date_start.strftime('%Y-%m-%dT%H:%M:%SZ')
+    return await influx_request_manager.get_data_after_date(date_start_str, uuid)
 
 
 @router.get("/get_data_by_uuid_before_date",
@@ -85,10 +85,10 @@ async def get_data_after_date(
             summary="Получить информацию по UUID индикатора до "
                     "определённой даты с первого значения"
             )
-async def get_data_after_date(
+async def get_data_before_date(
         influx_request_manager: InfluxDBRequestManager,
-        date_start: datetime = Query(..., description="2021-01-01T00:00:00Z"),
+        date_end: datetime = Query(..., description="2021-01-01T00:00:00Z"),
         uuid: str = Query(...),
 ):
-    date_start_str = date_start.strftime('%Y-%m-%dT%H:%M:%SZ')
-    return await influx_request_manager.get_data_after_date(date_start_str, uuid)
+    date_end_str = date_end.strftime('%Y-%m-%dT%H:%M:%SZ')
+    return await influx_request_manager.get_data_before_date(date_end_str, uuid)
