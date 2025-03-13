@@ -90,5 +90,6 @@ async def get_data_before_date(
         date_end: datetime = Query(..., description="2021-01-01T00:00:00Z"),
         uuid: str = Query(...),
 ):
+
     date_end_str = date_end.strftime('%Y-%m-%dT%H:%M:%SZ')
     return await influx_request_manager.get_data_before_date(date_end_str, uuid)
