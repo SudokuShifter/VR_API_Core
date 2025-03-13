@@ -10,12 +10,12 @@ from fastapi import (
     Query,
 )
 
-from csv_loader.utils import check_file_type
-from csv_loader.schemas import (
+from influx_api.utils import check_file_type
+from influx_api.schemas import (
     RequestDataWithDateRangeSchema,
     RequestDataWithIDSchema,
 )
-from csv_loader.dependencies import (
+from influx_api.dependencies import (
     CSVService,
     InfluxDBService,
     InfluxDBRequestManager

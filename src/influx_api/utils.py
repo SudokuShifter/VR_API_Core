@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import List
 
 import pandas as pd
+from loguru import logger
 from fastapi import UploadFile
 from pandas import DataFrame
 
@@ -29,6 +30,7 @@ def convert_csv_to_dataframe(
         storage: str,
         header_list: List[str],
 ) -> List[DataFrame]:
+    logger.info('Start converting csvs to dataframe')
     tmp_storage = os.walk(storage)
     df_list = []
     for root, _, files in tmp_storage:
@@ -43,5 +45,5 @@ def convert_csv_to_dataframe(
             data['date'] = data['date'].apply(convert_date)
             data['indicator'] = data['indicator'].astype('float64')
             df_list.append(data)
-    print('end convert csvs to dataframes')
+    logger.success('Finished converting csvs to dataframe')
     return df_list

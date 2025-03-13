@@ -5,6 +5,7 @@ import shutil
 from typing import Tuple
 
 import zipfile
+from loguru import logger
 import patoolib
 from dependency_injector.wiring import Provide
 from fastapi import UploadFile
@@ -17,9 +18,9 @@ from containers.config_containers import (
     ConfigContainer,
     RequestContainer
 )
-from csv_loader.config import InfluxDBConfig
+from influx_api.config import InfluxDBConfig
 
-from csv_loader.utils import (
+from influx_api.utils import (
     convert_csv_to_dataframe,
     convert_date
 )
@@ -162,7 +163,7 @@ class InfluxDBService(CoreResponse):
             point: int,
             file: UploadFile,
     ) -> JSONResponse:
-
+        logger.info('Start filling data in influxdb')
         if point == 2:
             self.csv_service.unpack_files_from_archive(file)
 
@@ -179,7 +180,7 @@ class InfluxDBService(CoreResponse):
                     data_frame_measurement_name='indicator',
                     data_frame_tag_columns=['ind_tag']
                 )
-
+        logger.success('Finished filling data in influxdb')
         return self.make_response(
             success=True,
             detail='Data successfully filled',

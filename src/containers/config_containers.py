@@ -6,7 +6,7 @@ from dependency_injector import (
     providers
 )
 
-from csv_loader.config import InfluxDBConfig, RequestDBConfig
+from influx_api.config import InfluxDBConfig, RequestDBConfig
 
 
 load_dotenv()

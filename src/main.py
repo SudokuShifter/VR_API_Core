@@ -9,15 +9,15 @@ from containers.config_containers import (
     ConfigContainer,
     RequestContainer
 )
-from csv_loader.routers import router
+from influx_api.routers import router
 
 
 @asynccontextmanager
 async def lifespan(_application: FastAPI) -> AsyncGenerator:
     config_container = ConfigContainer()
-    config_container.wire(packages=[__name__, 'csv_loader'])
+    config_container.wire(packages=[__name__, 'influx_api'])
     request_container = RequestContainer()
-    request_container.wire(packages=[__name__, 'csv_loader'])
+    request_container.wire(packages=[__name__, 'influx_api'])
     yield
 
 app = FastAPI(lifespan=lifespan)
