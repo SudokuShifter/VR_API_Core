@@ -93,7 +93,6 @@ celerybeat.pid
 
 # Environments
 djvenv
-.env
 .env/
 .venv
 .venv/
