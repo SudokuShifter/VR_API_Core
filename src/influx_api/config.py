@@ -17,6 +17,7 @@ class RequestModelConfig(BaseSettings):
     DATA_AFTER_DATE: str = Field(...)
     WRITE_IN_TAG_BY_DATE: str = Field(...)
     OBJECTS_BY_MODEL_ID: str = Field(...)
+    DATA_BY_DATE: str = Field(...)
 
 
 class RequestObjectConfig(BaseSettings):

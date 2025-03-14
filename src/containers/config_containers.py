@@ -45,6 +45,10 @@ class RequestModelContainer(containers.DeclarativeContainer):
         OBJECTS_BY_MODEL_ID=f'from(bucket: "{FULL_BUCKET_NAME}") '
                             '|> range(start: -5y)'
                             '|> filter(fn: (r) => r._measurement == "{:0}")',
+        DATA_BY_DATE=f'from(bucket: "{FULL_BUCKET_NAME}") '''
+                     '|> range(start: {:0})'
+                     '|> filter(fn: (r) => r._measurement == "{:0}" and r["{:2}"] == "{:3}")'
+                     '|> hourSelection(start: 0, stop: 23)'
     )
 
 

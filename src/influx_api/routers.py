@@ -44,15 +44,15 @@ async def fill_influx(
 
 @router.get("/get_data_by_uuid_and_range",
             status_code=status.HTTP_200_OK,
-            summary="Получить информацию по UUID индикатора и диапазону дат"
+            summary="Получить информацию по model_id, object_id и object_tag и диапазону дат"
             )
 async def get_data_by_uuid_and_range(
         influx_request_manager: InfluxDBRequestManager,
         date_start: datetime = Query(..., description="2021-01-01T00:00:00Z"),
         date_end: datetime = Query(..., description="2021-01-01T00:00:00Z"),
-        model_id: str = Query(...),
-        object_id: str = Query(...),
-        object_tag: str = Query(...),
+        model_id: str = Query(..., description='ID модели'),
+        object_id: str = Query(..., description='ID объекта'),
+        object_tag: str = Query(..., description='Tag объекта'),
 ):
     date_start_str = date_start.strftime('%Y-%m-%dT%H:%M:%SZ')
     date_end_str = date_end.strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -63,15 +63,15 @@ async def get_data_by_uuid_and_range(
 
 @router.get("/get_data_by_uuid_after_date",
             status_code=status.HTTP_200_OK,
-            summary="Получить информацию по UUID индикатора после "
+            summary="Получить информацию по model_id, object_id и object_tag после "
                     "определённой даты до последнего значения"
             )
 async def get_data_after_date(
         influx_request_manager: InfluxDBRequestManager,
         date_start: datetime = Query(..., description="2021-01-01T00:00:00Z"),
-        model_id: str = Query(...),
-        object_id: str = Query(...),
-        object_tag: str = Query(...),
+        model_id: str = Query(..., description='ID модели'),
+        object_id: str = Query(..., description='ID объекта'),
+        object_tag: str = Query(..., description='Tag объекта'),
 ):
     date_start_str = date_start.strftime('%Y-%m-%dT%H:%M:%SZ')
     return await influx_request_manager.get_data_after_date(
@@ -81,21 +81,39 @@ async def get_data_after_date(
 
 @router.get("/get_data_by_uuid_before_date",
             status_code=status.HTTP_200_OK,
-            summary="Получить информацию по UUID индикатора до "
+            summary="Получить информацию по model_id, object_id и object_tag до "
                     "определённой даты с первого значения"
             )
 async def get_data_before_date(
         influx_request_manager: InfluxDBRequestManager,
         date_end: datetime = Query(..., description="2021-01-01T00:00:00Z"),
-        model_id: str = Query(...),
-        object_id: str = Query(...),
-        object_tag: str = Query(...),
+        model_id: str = Query(..., description='ID модели'),
+        object_id: str = Query(..., description='ID объекта'),
+        object_tag: str = Query(..., description='Tag объекта'),
 ):
 
     date_end_str = date_end.strftime('%Y-%m-%dT%H:%M:%SZ')
     return await influx_request_manager.get_data_before_date(
         date_end_str, model_id, object_id, object_tag
     )
+
+
+@router.get("/get_data_by_uuid_and_day",
+            status_code=status.HTTP_200_OK,
+            summary="Получить информацию по model_id, object_id и object_tag для конкретного дня"
+            )
+async def get_data_by_uuid_and_day(
+        influx_request_manager: InfluxDBRequestManager,
+        date_start: datetime = Query(..., description="2021-01-01T00:00:00Z"),
+        model_id: str = Query(..., description='ID модели'),
+        object_id: str = Query(..., description='ID объекта'),
+        object_tag: str = Query(..., description='Tag объекта'),
+):
+    date_start_str = date_start.strftime('%Y-%m-%dT%H:%M:%SZ')
+    return await influx_request_manager.get_data_by_day(
+        date_start_str, model_id, object_id, object_tag
+    )
+
 
 @router.get("/get_objects_by_model_id",
             status_code=status.HTTP_200_OK,

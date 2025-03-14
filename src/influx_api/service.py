@@ -271,6 +271,28 @@ class InfluxDBRequestManager(InfluxDBService):
         )
 
 
+    async def get_data_by_day(
+            self,
+            date_start: datetime.datetime,
+            model_id: str,
+            object_id: str,
+            object_tag: str,
+    ):
+        result = await asyncio.to_thread(
+            self.query_api.query,
+            self.request_model_manager.DATA_BY_DATE.format(
+                date_start,
+                model_id,
+                object_id,
+                object_tag
+            ))
+        return self.make_response(
+            success=True,
+            detail=result.to_json(),
+            status_code=200
+        )
+
+
     async def get_all_objects_by_model_id(
             self,
             model_id: str,
