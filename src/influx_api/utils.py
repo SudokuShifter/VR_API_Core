@@ -29,6 +29,7 @@ def convert_date(date: str) -> datetime:
 def convert_csv_to_dataframe(
         storage: str,
         header_list: List[str],
+        object_id: int
 ) -> List[DataFrame]:
     logger.info('Start converting csvs to dataframe')
     tmp_storage = os.walk(storage)
@@ -40,7 +41,7 @@ def convert_csv_to_dataframe(
                 names=header_list, delimiter=',',
                 engine='python'
             )
-            data['ind_tag'] = uuid4()
+            data[str(object_id)] = uuid4()
             data['indicator'] = pd.to_numeric(data['indicator'], errors='coerce')
             data['date'] = data['date'].apply(convert_date)
             data['indicator'] = data['indicator'].astype('float64')

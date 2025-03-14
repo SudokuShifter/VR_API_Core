@@ -1,8 +1,11 @@
 import datetime
 import os
+from optparse import Option
 from pathlib import Path
 import shutil
 from typing import Tuple
+import asyncio
+from typing import Any, Optional
 
 import zipfile
 from loguru import logger
@@ -16,7 +19,8 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 
 from containers.config_containers import (
     ConfigContainer,
-    RequestContainer
+    RequestModelContainer,
+    RequestObjectContainer
 )
 from influx_api.config import InfluxDBConfig
 
@@ -33,7 +37,7 @@ class CoreResponse:
     @staticmethod
     def make_response(
             success: bool,
-            detail: str,
+            detail: Any,
             status_code: int
     ) -> JSONResponse:
 
@@ -146,14 +150,16 @@ class InfluxDBService(CoreResponse):
             self,
             storage: FileSystemStorage,
             config: InfluxDBConfig = Provide[ConfigContainer.influxdb_config],
-            request_manager: RequestContainer = Provide[RequestContainer.request_manager],
+            request_model_manager: RequestModelContainer = Provide[RequestModelContainer.request_model_manager],
+            request_object_manager: RequestObjectContainer = Provide[RequestObjectContainer.request_object_manager],
     ):
         self.storage_path = storage._path
         self.config = config
         self.client = InfluxDBClient(url=config.DB_URL, org=config.DB_ORG,
                                      token=config.DB_TOKEN, bucket=config.DB_BUCKET_NAME)
         self.csv_service = CSVService(storage)
-        self.request_manager = request_manager
+        self.request_model_manager = request_model_manager
+        self.request_object_manager = request_object_manager
         self.query_api = self.client.query_api()
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
 
@@ -162,13 +168,15 @@ class InfluxDBService(CoreResponse):
             self,
             point: int,
             file: UploadFile,
+            model_id: int,
+            object_id: int
     ) -> JSONResponse:
         logger.info('Start filling data in influxdb')
         if point == 2:
             self.csv_service.unpack_files_from_archive(file)
 
         df_list = convert_csv_to_dataframe(storage=self.storage_path,
-                                 header_list=self.HEADER_LIST)
+                                 header_list=self.HEADER_LIST, object_id=object_id)
         for df in df_list:
             df.set_index('date', inplace=True)
             chunk_size = 10000
@@ -177,8 +185,8 @@ class InfluxDBService(CoreResponse):
                 self.write_api.write(
                     bucket=self.config.DB_BUCKET_NAME,
                     record=chunk,
-                    data_frame_measurement_name='indicator',
-                    data_frame_tag_columns=['ind_tag']
+                    data_frame_measurement_name=model_id,
+                    data_frame_tag_columns=[str(object_id)]
                 )
         logger.success('Finished filling data in influxdb')
         return self.make_response(
@@ -194,36 +202,27 @@ class InfluxDBRequestManager(InfluxDBService):
     - Получение данных
     - Запись (запросом)
     """
-    async def get_full_data_by_id(
-            self,
-            ind_tag: str
-    ):
-        result = self.query_api.query(
-            self.request_manager.FULL_DATA_BY_TAG.format(
-                ind_tag
-        ))
-        return self.make_response(
-            success=True,
-            detail=str(result),
-            status_code=200
-        )
-
 
     async def get_data_by_range(
             self,
             date_start: datetime.datetime,
             date_end: datetime.datetime,
-            ind_tag: str,
+            model_id: str,
+            object_id: str,
+            object_tag: str,
     ):
-        result = self.query_api.query(
-            self.request_manager.DATA_FOR_RANGE_BY_TAG.format(
+        result = await asyncio.to_thread(
+            self.query_api.query,
+            self.request_model_manager.DATA_FOR_RANGE_BY_TAG.format(
                 date_start,
                 date_end,
-                ind_tag
-        ))
+                model_id,
+                object_id,
+                object_tag,
+            ))
         return self.make_response(
             success=True,
-            detail=str(result),
+            detail=result.to_json(),
             status_code=200
         )
 
@@ -231,16 +230,21 @@ class InfluxDBRequestManager(InfluxDBService):
     async def get_data_before_date(
             self,
             date_end: datetime.datetime,
-            ind_tag: str,
+            model_id: str,
+            object_id: str,
+            object_tag: str,
     ):
-        result = self.query_api.query(
-            self.request_manager.DATA_BEFORE_DATE.format(
+        result = await asyncio.to_thread(
+            self.query_api.query,
+            self.request_model_manager.DATA_BEFORE_DATE.format(
                 date_end,
-                ind_tag
-        ))
+                model_id,
+                object_id,
+                object_tag
+            ))
         return self.make_response(
             success=True,
-            detail=str(result),
+            detail=result.to_json(),
             status_code=200
         )
 
@@ -248,15 +252,73 @@ class InfluxDBRequestManager(InfluxDBService):
     async def get_data_after_date(
             self,
             date_start: datetime.datetime,
-            ind_tag: str,
+            model_id: str,
+            object_id: str,
+            object_tag: str,
     ):
-        result = self.query_api.query(
-            self.request_manager.DATA_AFTER_DATE.format(
+        result = await asyncio.to_thread(
+            self.query_api.query,
+            self.request_model_manager.DATA_AFTER_DATE.format(
                 date_start,
-                ind_tag
-        ))
+                model_id,
+                object_id,
+                object_tag
+            ))
         return self.make_response(
             success=True,
-            detail=str(result),
+            detail=result.to_json(),
             status_code=200
         )
+
+
+    async def get_all_objects_by_model_id(
+            self,
+            model_id: str,
+            only_root: Optional[bool] = False,
+            include_deleted: Optional[bool] = False,
+            calculate_counts: Optional[bool] = False
+    ):
+        pass
+
+
+    async def get_include_objects_by_model_id(
+            self,
+            model_id: int,
+            object_id: int,
+            include_deleted: bool = False,
+            calculate_counts: bool = False,
+    ):
+        pass
+
+
+    async def get_object_by_id(
+            self,
+            object_id: int,
+            include_deleted: bool = False
+    ):
+        pass
+
+
+    async def get_object_properties(
+            self,
+            name: str,
+            only_root: bool = False,
+            include_deleted: bool = False,
+            calculate_counts: bool = False,
+    ):
+        pass
+
+
+    async def get_object_properties_by_object_id_influx(
+            self,
+            object_id: int
+    ):
+        pass
+
+
+    async def get_object_property(
+            self,
+            property_id: int,
+            include_deleted: bool = False
+    ):
+        pass

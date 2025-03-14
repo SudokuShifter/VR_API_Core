@@ -7,7 +7,8 @@ import uvicorn
 
 from containers.config_containers import (
     ConfigContainer,
-    RequestContainer
+    RequestModelContainer,
+    RequestObjectContainer
 )
 from influx_api.routers import router
 
@@ -16,8 +17,10 @@ from influx_api.routers import router
 async def lifespan(_application: FastAPI) -> AsyncGenerator:
     config_container = ConfigContainer()
     config_container.wire(packages=[__name__, 'influx_api'])
-    request_container = RequestContainer()
-    request_container.wire(packages=[__name__, 'influx_api'])
+    request_model_container = RequestModelContainer()
+    request_model_container.wire(packages=[__name__, 'influx_api'])
+    request_object_container = RequestObjectContainer()
+    request_object_container.wire(packages=[__name__, 'influx_api'])
     yield
 
 app = FastAPI(lifespan=lifespan)

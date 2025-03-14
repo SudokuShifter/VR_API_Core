@@ -32,23 +32,14 @@ router = APIRouter()
 async def fill_influx(
         csv_service: CSVService,
         influx_service: InfluxDBService,
-        file_or_archive: UploadFile = File(..., description="CSV file or archive"),
+        file_or_archive: UploadFile = File(..., description="CSV file or archive (zip/rar)"),
+        model_id: int = Query(..., description='ID модели'),
+        object_id: int = Query(..., description='ID объекта')
 ):
     point = check_file_type(file_or_archive)
     csv_service.save_file(file_or_archive)
-    tasks = BackgroundTask(influx_service.fill_data, point, file_or_archive)
+    tasks = BackgroundTask(influx_service.fill_data, point, file_or_archive, model_id, object_id)
     return JSONResponse({'status': 'in progress'},200, background=tasks)
-
-
-@router.get("/get_data_by_uuid",
-            status_code=status.HTTP_200_OK,
-            summary="Получить всю информацию по UUID индикатора"
-            )
-async def get_data_by_uuid(
-        influx_request_manager: InfluxDBRequestManager,
-        uuid: str = Query(..., description='UUID индикатора'),
-):
-    return await influx_request_manager.get_full_data_by_id(uuid)
 
 
 @router.get("/get_data_by_uuid_and_range",
@@ -59,11 +50,15 @@ async def get_data_by_uuid_and_range(
         influx_request_manager: InfluxDBRequestManager,
         date_start: datetime = Query(..., description="2021-01-01T00:00:00Z"),
         date_end: datetime = Query(..., description="2021-01-01T00:00:00Z"),
-        uuid: str = Query(...),
+        model_id: str = Query(...),
+        object_id: str = Query(...),
+        object_tag: str = Query(...),
 ):
     date_start_str = date_start.strftime('%Y-%m-%dT%H:%M:%SZ')
     date_end_str = date_end.strftime('%Y-%m-%dT%H:%M:%SZ')
-    return await influx_request_manager.get_data_by_range(date_start_str, date_end_str, uuid)
+    return await influx_request_manager.get_data_by_range(
+        date_start_str, date_end_str, model_id, object_id, object_tag
+    )
 
 
 @router.get("/get_data_by_uuid_after_date",
@@ -74,10 +69,14 @@ async def get_data_by_uuid_and_range(
 async def get_data_after_date(
         influx_request_manager: InfluxDBRequestManager,
         date_start: datetime = Query(..., description="2021-01-01T00:00:00Z"),
-        uuid: str = Query(...),
+        model_id: str = Query(...),
+        object_id: str = Query(...),
+        object_tag: str = Query(...),
 ):
     date_start_str = date_start.strftime('%Y-%m-%dT%H:%M:%SZ')
-    return await influx_request_manager.get_data_after_date(date_start_str, uuid)
+    return await influx_request_manager.get_data_after_date(
+        date_start_str, model_id, object_id, object_tag
+    )
 
 
 @router.get("/get_data_by_uuid_before_date",
@@ -88,8 +87,22 @@ async def get_data_after_date(
 async def get_data_before_date(
         influx_request_manager: InfluxDBRequestManager,
         date_end: datetime = Query(..., description="2021-01-01T00:00:00Z"),
-        uuid: str = Query(...),
+        model_id: str = Query(...),
+        object_id: str = Query(...),
+        object_tag: str = Query(...),
 ):
 
     date_end_str = date_end.strftime('%Y-%m-%dT%H:%M:%SZ')
-    return await influx_request_manager.get_data_before_date(date_end_str, uuid)
+    return await influx_request_manager.get_data_before_date(
+        date_end_str, model_id, object_id, object_tag
+    )
+
+@router.get("/get_objects_by_model_id",
+            status_code=status.HTTP_200_OK,
+            summary="Получить все вложенные объекты модели"
+            )
+async def get_objects_by_model_id(
+        influx_request_manager: InfluxDBRequestManager,
+        model_id: str = Query(..., description='ID модели')
+):
+    return await influx_request_manager.get_all_objects_by_model_id(model_id)
