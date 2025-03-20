@@ -1,0 +1,123 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vr-calc-back
+  labels:
+    app.kubernetes.io/name: vr-calc-back
+    app: vr-calc-back
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vr-calc-back
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: vr-calc-back
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app.kubernetes.io/name
+                      operator: In
+                      values:
+                        - vr-calc-back
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+              
+      imagePullSecrets:
+        - name: nexus-pull-secret-5443
+      containers:
+        - image: nexus.okd4.inlinegroup.ru:5443/complex/dev/vr-calculation-backend:master
+          imagePullPolicy: Always
+          name: vr-calc-back
+          
+          env:
+            - name:  DB_HOST
+              value: "localhost"
+            - name:  DB_NAME
+              value: vr
+            - name:  DB_USER
+              value: vrgpn
+            - name:  DB_PASSWORD
+              value: vrgpn
+            - name:  DB_PORT
+              value: "5433"
+            - name:  DB_SCHEME
+              value: vr_scheme
+            - name:  FMM_HOST
+              value: localhost
+            - name:  FMM_SCHEME
+              value: https
+            - name:  ML_HOST
+              value: localhost
+            - name:  ML_SCHEME
+              value: https
+            - name:  ZIF_HOST
+              value: localhost
+            - name:  ZIF_SCHEME
+              value: https
+            - name:  VR_TASK_CRON
+              value: 0/30 * * * * *
+            - name:  VR_CANONICAL_FACTOR_CRON
+              value: 0 3 * * * *
+            - name:  VR_TASK_DATE_START
+              value: "2022-11-05T01:00:00.000Z"
+            - name:  VR_TASK_VALIDATION_COUNT_DAYS
+              value: "30"
+          resources:
+            # limits:
+            #   cpu: 5000m
+            #   memory: 5120Mi
+            requests:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vr-calc-back
+spec:
+  clusterIP: None
+  selector:
+    app: vr-calc-back
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vr-calc-back
+  labels:
+    app.kubernetes.io/name: vr-calc-back
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "64m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - vr-calc-back.apps.dh-dev.inlinegroup.ru
+      secretName: inline-tls-apps
+  rules:
+    - host: vr-calc-back.apps.dh-dev.inlinegroup.ru
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vr-calc-back
+                port:
+                  name: http

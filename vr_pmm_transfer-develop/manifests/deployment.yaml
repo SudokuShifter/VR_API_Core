@@ -1,0 +1,99 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vr-pmm-transfer
+  labels:
+    app.kubernetes.io/name: vr-pmm-transfer
+    app: vr-pmm-transfer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vr-pmm-transfer
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: vr-pmm-transfer
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app.kubernetes.io/name
+                      operator: In
+                      values:
+                        - vr-pmm-transfer
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+              
+      imagePullSecrets:
+        - name: nexus-pull-secret-5443
+      containers:
+        - image: nexus.okd4.inlinegroup.ru:5443/complex/zillot/vr_pmm_transfer:develop
+          imagePullPolicy: Always
+          name: vr-pmm-transfer
+          # command: gunicorn main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8080 --timeout 360
+          ports:
+            - containerPort: 8081
+              name: http
+              protocol: TCP
+          # env:
+          #   - name: PROJECT_HOST
+          #     value: "0.0.0.0"
+          #   - name: PROJECT_PORT
+          #     value: "8080"
+          resources:
+            # limits:
+            #   cpu: 2000m
+            #   memory: 512Mi
+            requests:
+              cpu: 1000m
+              memory: 2000Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vr-pmm-transfer
+spec:
+  clusterIP: None
+  selector:
+    app: vr-pmm-transfer
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8081
+      targetPort: 8081
+---
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: vr-pmm-transfer
+#   labels:
+#     app.kubernetes.io/name: vr-pmm-transfer
+#   annotations:
+#     nginx.ingress.kubernetes.io/proxy-body-size: "64m"
+# spec:
+#   ingressClassName: nginx
+#   tls:
+#     - hosts:
+#         - vr-pmm-transfer.apps.dh-dev.inlinegroup.ru
+#       secretName: inline-tls-apps
+#   rules:
+#     - host: vr-pmm-transfer.apps.dh-dev.inlinegroup.ru
+#       http:
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: vr-pmm-transfer
+#                 port:
+#                   name: http

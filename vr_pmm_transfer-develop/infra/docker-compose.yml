@@ -1,0 +1,23 @@
+version: "3.7"
+services:
+  api:
+    container_name: api
+    restart: always
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      args: # for development
+        IS_MACOS: ${IS_MACOS:-false}
+    command: gunicorn main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8081 --timeout 360
+    volumes:
+      - ../logs/:/opt/logs
+    environment:
+      PROJECT_HOST: "0.0.0.0"
+      PROJECT_PORT: 8081
+    ports: # for development
+      - "8081:8081"
+    env_file:
+      - .env
+
+volumes:
+  logs:

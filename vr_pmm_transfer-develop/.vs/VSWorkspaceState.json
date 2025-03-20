@@ -1,0 +1,14 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\infra",
+    "\\manifests",
+    "\\service",
+    "\\service\\pmf",
+    "\\service\\solver",
+    "\\service\\solver\\choke",
+    "\\service\\tests"
+  ],
+  "SelectedNode": "\\service\\solver",
+  "PreviewInSolutionExplorer": false
+}
