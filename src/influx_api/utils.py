@@ -9,11 +9,11 @@ from fastapi import UploadFile
 from pandas import DataFrame
 
 
-from influx_api.pkg import data, data_by_filename
+from influx_api.pkg.pkg import DATA, DATA_BY_FILENAME
 
 
 def check_type_doc_by_filename(filename: str) -> str | UUID:
-    for i in data_by_filename.items():
+    for i in DATA_BY_FILENAME.items():
         if filename in i[1]:
             return i[0]
     else:
@@ -21,7 +21,7 @@ def check_type_doc_by_filename(filename: str) -> str | UUID:
 
 
 def check_well_id_by_filename(filename: str) -> str | UUID:
-    for i in data.items():
+    for i in DATA.items():
         if filename in i[1]:
             return i[0]
     else:
@@ -42,7 +42,7 @@ def check_file_type(file: UploadFile):
 
 
 def convert_date(date: str) -> datetime:
-    return datetime.strptime(date, '%d-%b-%y %H:%M:%S.%f')
+    return datetime.strptime(date, '%d-%b-%y %H:%M:%S')
 
 
 def convert_csv_to_dataframe(
@@ -60,8 +60,11 @@ def convert_csv_to_dataframe(
                 names=header_list, delimiter=',',
                 engine='python'
             )
-            filenames.append(check_well_id_by_filename(file.rsplit('.', 1)[0]))
-            data['name_ind'] = check_type_doc_by_filename(file.rsplit('.', 1)[0])
+            filename = check_well_id_by_filename(file.rsplit('.', 1)[0])
+            doctype = check_type_doc_by_filename(file.rsplit('.', 1)[0])
+
+            filenames.append(filename)
+            data['name_ind'] = doctype
             data['indicator'] = pd.to_numeric(data['indicator'], errors='coerce')
             data['date'] = data['date'].apply(convert_date)
             data['indicator'] = data['indicator'].astype('float64')
@@ -71,19 +74,26 @@ def convert_csv_to_dataframe(
 
 
 def convert_tsdb_response(response: list):
-    processed_data = {'g_gas_timed': [],
-                      'g_gc_timed': [],
-                      'g_wat_timed': []}
+    processed_data = {'q_gas_timed': [],
+                      'q_gc_timed': [],
+                      'q_wat_timed': []}
 
     for table in response:
         for record in table.records:
             record_name = record.values.get('name_ind')
-            if isinstance(record.get_value(), (int, float)) and record.get_value() != 0:
+            if isinstance(record.get_value(), (int, float)):
                 if record_name == 'Расход по газу Вентури':
-                    processed_data['g_gas_timed'].append(record.get_value())
+                    processed_data['q_gas_timed'].append(record.get_value())
                 elif record_name == 'Расход по конденсату Вентури':
-                    processed_data['g_gc_timed'].append(record.get_value())
+                    processed_data['q_gc_timed'].append(record.get_value())
                 elif record_name == 'Расход по воде Вентури':
-                    processed_data['g_wat_timed'].append(record.get_value())
+                    processed_data['q_wat_timed'].append(record.get_value())
 
+    min_value = min(len(processed_data['q_gas_timed']),
+                    len(processed_data['q_gc_timed']),
+                    len(processed_data['q_wat_timed']))
+
+    processed_data['q_gas_timed'] = processed_data['q_gas_timed'][:min_value]
+    processed_data['q_gc_timed'] = processed_data['q_gc_timed'][:min_value]
+    processed_data['q_wat_timed'] = processed_data['q_wat_timed'][:min_value]
     return processed_data
