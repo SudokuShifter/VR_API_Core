@@ -1,6 +1,0 @@
-services:
-  app_gzn-deb-restoring:
-    image: nexus.okd4.inlinegroup.ru:5443/complex/zillot/vr_ml_transfer:local
-    build: .
-    ports:
-    - '8082:8082'

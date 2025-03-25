@@ -34,11 +34,10 @@ async def fill_influx(
         influx_service: InfluxDBService,
         file_or_archive: UploadFile = File(..., description="CSV file or archive (zip/rar)"),
         model_id: int = Query(..., description='ID модели'),
-        object_id: int = Query(..., description='ID объекта')
 ):
     point = check_file_type(file_or_archive)
     csv_service.save_file(file_or_archive)
-    tasks = BackgroundTask(influx_service.fill_data, point, file_or_archive, model_id, object_id)
+    tasks = BackgroundTask(influx_service.fill_data, point, file_or_archive, model_id)
     return JSONResponse({'status': 'in progress'},200, background=tasks)
 
 

@@ -169,14 +169,13 @@ class InfluxDBService(CoreResponse):
             point: int,
             file: UploadFile,
             model_id: int,
-            object_id: int
     ) -> JSONResponse:
         logger.info('Start filling data in influxdb')
         if point == 2:
             self.csv_service.unpack_files_from_archive(file)
 
         df_list = convert_csv_to_dataframe(storage=self.storage_path,
-                                 header_list=self.HEADER_LIST, object_id=object_id)
+                                 header_list=self.HEADER_LIST)
         for df in df_list:
             df.set_index('date', inplace=True)
             chunk_size = 10000
@@ -186,7 +185,7 @@ class InfluxDBService(CoreResponse):
                     bucket=self.config.DB_BUCKET_NAME,
                     record=chunk,
                     data_frame_measurement_name=model_id,
-                    data_frame_tag_columns=[str(object_id)]
+                    data_frame_tag_columns=['well_id']
                 )
         logger.success('Finished filling data in influxdb')
         return self.make_response(

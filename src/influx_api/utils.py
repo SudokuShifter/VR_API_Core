@@ -1,12 +1,21 @@
 import os
 from uuid import uuid4
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 from loguru import logger
 from fastapi import UploadFile
 from pandas import DataFrame
+
+
+from influx_api.pkg import data
+
+
+def check_well_id_by_filename(filename: str) -> Optional[str]:
+    for i in data.values():
+        if filename in i[1]:
+            return i[0]
 
 
 def check_file_type(file: UploadFile):
@@ -29,7 +38,6 @@ def convert_date(date: str) -> datetime:
 def convert_csv_to_dataframe(
         storage: str,
         header_list: List[str],
-        object_id: int
 ) -> List[DataFrame]:
     logger.info('Start converting csvs to dataframe')
     tmp_storage = os.walk(storage)
@@ -41,7 +49,7 @@ def convert_csv_to_dataframe(
                 names=header_list, delimiter=',',
                 engine='python'
             )
-            data[str(object_id)] = uuid4()
+            data['well_id'] = check_well_id_by_filename(file)
             data['indicator'] = pd.to_numeric(data['indicator'], errors='coerce')
             data['date'] = data['date'].apply(convert_date)
             data['indicator'] = data['indicator'].astype('float64')
