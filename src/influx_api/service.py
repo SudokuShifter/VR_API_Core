@@ -19,8 +19,7 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 
 from containers.config_containers import (
     ConfigContainer,
-    RequestModelContainer,
-    RequestObjectContainer
+    RequestModelContainer
 )
 from influx_api.config import InfluxDBConfig
 
@@ -151,7 +150,6 @@ class InfluxDBService(CoreResponse):
             storage: FileSystemStorage,
             config: InfluxDBConfig = Provide[ConfigContainer.influxdb_config],
             request_model_manager: RequestModelContainer = Provide[RequestModelContainer.request_model_manager],
-            request_object_manager: RequestObjectContainer = Provide[RequestObjectContainer.request_object_manager],
     ):
         self.storage_path = storage._path
         self.config = config
@@ -159,7 +157,6 @@ class InfluxDBService(CoreResponse):
                                      token=config.DB_TOKEN, bucket=config.DB_BUCKET_NAME)
         self.csv_service = CSVService(storage)
         self.request_model_manager = request_model_manager
-        self.request_object_manager = request_object_manager
         self.query_api = self.client.query_api()
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
 
@@ -168,24 +165,25 @@ class InfluxDBService(CoreResponse):
             self,
             point: int,
             file: UploadFile,
-            model_id: int,
+            model_id: int | str,
     ) -> JSONResponse:
         logger.info('Start filling data in influxdb')
         if point == 2:
             self.csv_service.unpack_files_from_archive(file)
 
-        df_list = convert_csv_to_dataframe(storage=self.storage_path,
+        df_list, filenames = convert_csv_to_dataframe(storage=self.storage_path,
                                  header_list=self.HEADER_LIST)
-        for df in df_list:
+        for idx, df in enumerate(df_list):
             df.set_index('date', inplace=True)
             chunk_size = 10000
+            filename = filenames[idx]
             for i in range(0, len(df), chunk_size):
                 chunk = df.iloc[i:i + chunk_size]
                 self.write_api.write(
                     bucket=self.config.DB_BUCKET_NAME,
                     record=chunk,
-                    data_frame_measurement_name=model_id,
-                    data_frame_tag_columns=['well_id']
+                    data_frame_measurement_name=filename,
+                    data_frame_tag_columns=['name_ind']
                 )
         logger.success('Finished filling data in influxdb')
         return self.make_response(
@@ -201,14 +199,28 @@ class InfluxDBRequestManager(InfluxDBService):
     - Получение данных
     - Запись (запросом)
     """
+    async def get_data_for_validate_by_range(
+            self,
+            time_left: str,
+            time_right: str,
+            well_id: str,
+    ):
+        result = await asyncio.to_thread(
+            self.query_api.query,
+            self.request_model_manager.DATA_FOR_RANGE_BY_TAG.format(
+                time_left,
+                time_right,
+                well_id
+            ))
+        return result
+
+
 
     async def get_data_by_range(
             self,
             date_start: datetime.datetime,
             date_end: datetime.datetime,
             model_id: str,
-            object_id: str,
-            object_tag: str,
     ):
         result = await asyncio.to_thread(
             self.query_api.query,
@@ -216,8 +228,6 @@ class InfluxDBRequestManager(InfluxDBService):
                 date_start,
                 date_end,
                 model_id,
-                object_id,
-                object_tag,
             ))
         return self.make_response(
             success=True,
@@ -230,16 +240,12 @@ class InfluxDBRequestManager(InfluxDBService):
             self,
             date_end: datetime.datetime,
             model_id: str,
-            object_id: str,
-            object_tag: str,
     ):
         result = await asyncio.to_thread(
             self.query_api.query,
             self.request_model_manager.DATA_BEFORE_DATE.format(
                 date_end,
                 model_id,
-                object_id,
-                object_tag
             ))
         return self.make_response(
             success=True,
@@ -252,16 +258,12 @@ class InfluxDBRequestManager(InfluxDBService):
             self,
             date_start: datetime.datetime,
             model_id: str,
-            object_id: str,
-            object_tag: str,
     ):
         result = await asyncio.to_thread(
             self.query_api.query,
             self.request_model_manager.DATA_AFTER_DATE.format(
                 date_start,
                 model_id,
-                object_id,
-                object_tag
             ))
         return self.make_response(
             success=True,
@@ -274,72 +276,15 @@ class InfluxDBRequestManager(InfluxDBService):
             self,
             date_start: datetime.datetime,
             model_id: str,
-            object_id: str,
-            object_tag: str,
     ):
         result = await asyncio.to_thread(
             self.query_api.query,
             self.request_model_manager.DATA_BY_DATE.format(
                 date_start,
                 model_id,
-                object_id,
-                object_tag
             ))
         return self.make_response(
             success=True,
             detail=result.to_json(),
             status_code=200
         )
-
-
-    async def get_all_objects_by_model_id(
-            self,
-            model_id: str,
-            only_root: Optional[bool] = False,
-            include_deleted: Optional[bool] = False,
-            calculate_counts: Optional[bool] = False
-    ):
-        pass
-
-
-    async def get_include_objects_by_model_id(
-            self,
-            model_id: int,
-            object_id: int,
-            include_deleted: bool = False,
-            calculate_counts: bool = False,
-    ):
-        pass
-
-
-    async def get_object_by_id(
-            self,
-            object_id: int,
-            include_deleted: bool = False
-    ):
-        pass
-
-
-    async def get_object_properties(
-            self,
-            name: str,
-            only_root: bool = False,
-            include_deleted: bool = False,
-            calculate_counts: bool = False,
-    ):
-        pass
-
-
-    async def get_object_properties_by_object_id_influx(
-            self,
-            object_id: int
-    ):
-        pass
-
-
-    async def get_object_property(
-            self,
-            property_id: int,
-            include_deleted: bool = False
-    ):
-        pass

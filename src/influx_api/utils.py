@@ -1,5 +1,5 @@
 import os
-from uuid import uuid4
+from uuid import uuid4, UUID
 from datetime import datetime
 from typing import List, Optional
 
@@ -9,13 +9,23 @@ from fastapi import UploadFile
 from pandas import DataFrame
 
 
-from influx_api.pkg import data
+from influx_api.pkg import data, data_by_filename
 
 
-def check_well_id_by_filename(filename: str) -> Optional[str]:
-    for i in data.values():
+def check_type_doc_by_filename(filename: str) -> str | UUID:
+    for i in data_by_filename.items():
         if filename in i[1]:
             return i[0]
+    else:
+        return uuid4()
+
+
+def check_well_id_by_filename(filename: str) -> str | UUID:
+    for i in data.items():
+        if filename in i[1]:
+            return i[0]
+    else:
+        return uuid4()
 
 
 def check_file_type(file: UploadFile):
@@ -38,10 +48,11 @@ def convert_date(date: str) -> datetime:
 def convert_csv_to_dataframe(
         storage: str,
         header_list: List[str],
-) -> List[DataFrame]:
+) -> (List[DataFrame], List[str]):
     logger.info('Start converting csvs to dataframe')
     tmp_storage = os.walk(storage)
     df_list = []
+    filenames = []
     for root, _, files in tmp_storage:
         for file in files:
             data = pd.read_csv(
@@ -49,10 +60,30 @@ def convert_csv_to_dataframe(
                 names=header_list, delimiter=',',
                 engine='python'
             )
-            data['well_id'] = check_well_id_by_filename(file)
+            filenames.append(check_well_id_by_filename(file.rsplit('.', 1)[0]))
+            data['name_ind'] = check_type_doc_by_filename(file.rsplit('.', 1)[0])
             data['indicator'] = pd.to_numeric(data['indicator'], errors='coerce')
             data['date'] = data['date'].apply(convert_date)
             data['indicator'] = data['indicator'].astype('float64')
             df_list.append(data)
     logger.success('Finished converting csvs to dataframe')
-    return df_list
+    return df_list, filenames
+
+
+def convert_tsdb_response(response: list):
+    processed_data = {'g_gas_timed': [],
+                      'g_gc_timed': [],
+                      'g_wat_timed': []}
+
+    for table in response:
+        for record in table.records:
+            record_name = record.values.get('name_ind')
+            if isinstance(record.get_value(), (int, float)) and record.get_value() != 0:
+                if record_name == 'Расход по газу Вентури':
+                    processed_data['g_gas_timed'].append(record.get_value())
+                elif record_name == 'Расход по конденсату Вентури':
+                    processed_data['g_gc_timed'].append(record.get_value())
+                elif record_name == 'Расход по воде Вентури':
+                    processed_data['g_wat_timed'].append(record.get_value())
+
+    return processed_data
