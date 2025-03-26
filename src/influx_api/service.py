@@ -165,24 +165,25 @@ class InfluxDBService(CoreResponse):
             self,
             point: int,
             file: UploadFile,
-            model_id: int | str,
     ) -> JSONResponse:
         logger.info('Start filling data in influxdb')
         if point == 2:
             self.csv_service.unpack_files_from_archive(file)
 
-        df_list, filenames = convert_csv_to_dataframe(storage=self.storage_path,
-                                 header_list=self.HEADER_LIST)
+        df_list, well_ids = convert_csv_to_dataframe(
+            storage=self.storage_path,
+            header_list=self.HEADER_LIST
+        )
         for idx, df in enumerate(df_list):
             df.set_index('date', inplace=True)
             chunk_size = 10000
-            filename = filenames[idx]
+            well_id = well_ids[idx]
             for i in range(0, len(df), chunk_size):
                 chunk = df.iloc[i:i + chunk_size]
                 self.write_api.write(
                     bucket=self.config.DB_BUCKET_NAME,
                     record=chunk,
-                    data_frame_measurement_name=filename,
+                    data_frame_measurement_name=well_id,
                     data_frame_tag_columns=['name_ind']
                 )
         logger.success('Finished filling data in influxdb')
@@ -207,7 +208,7 @@ class InfluxDBRequestManager(InfluxDBService):
     ):
         result = await asyncio.to_thread(
             self.query_api.query,
-            self.request_model_manager.DATA_FOR_RANGE_BY_TAG.format(
+            self.request_model_manager.DATA_FOR_VALIDATE.format(
                 time_left,
                 time_right,
                 well_id
@@ -215,76 +216,36 @@ class InfluxDBRequestManager(InfluxDBService):
         return result
 
 
-
-    async def get_data_by_range(
+    async def get_data_for_adapt(
             self,
-            date_start: datetime.datetime,
-            date_end: datetime.datetime,
-            model_id: str,
+            time_left: str,
+            time_right: str,
+            well_id: str,
     ):
         result = await asyncio.to_thread(
             self.query_api.query,
-            self.request_model_manager.DATA_FOR_RANGE_BY_TAG.format(
+            self.request_model_manager.DATA_FOR_ADAPT_BY_RANGE.format(
+                time_left,
+                time_right,
+                well_id
+            )
+        )
+        return result
+
+
+    async def get_data_for_fmm_by_time_point(
+            self,
+            date_start: str,
+            date_end: str,
+            well_id: str
+    ):
+
+        result = await asyncio.to_thread(
+            self.query_api.query,
+            self.request_model_manager.DATA_FOR_FMM_BY_TIME_POINT.format(
                 date_start,
                 date_end,
-                model_id,
-            ))
-        return self.make_response(
-            success=True,
-            detail=result.to_json(),
-            status_code=200
+                well_id
+            )
         )
-
-
-    async def get_data_before_date(
-            self,
-            date_end: datetime.datetime,
-            model_id: str,
-    ):
-        result = await asyncio.to_thread(
-            self.query_api.query,
-            self.request_model_manager.DATA_BEFORE_DATE.format(
-                date_end,
-                model_id,
-            ))
-        return self.make_response(
-            success=True,
-            detail=result.to_json(),
-            status_code=200
-        )
-
-
-    async def get_data_after_date(
-            self,
-            date_start: datetime.datetime,
-            model_id: str,
-    ):
-        result = await asyncio.to_thread(
-            self.query_api.query,
-            self.request_model_manager.DATA_AFTER_DATE.format(
-                date_start,
-                model_id,
-            ))
-        return self.make_response(
-            success=True,
-            detail=result.to_json(),
-            status_code=200
-        )
-
-
-    async def get_data_by_day(
-            self,
-            date_start: datetime.datetime,
-            model_id: str,
-    ):
-        result = await asyncio.to_thread(
-            self.query_api.query,
-            self.request_model_manager.DATA_BY_DATE.format(
-                date_start,
-                model_id,
-            ))
-        return self.make_response(
-            success=True,
-            detail=result.to_json(),
-            status_code=200
-        )
+        return result

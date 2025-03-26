@@ -32,5 +32,6 @@ def generate_param_by_filename_dict(filename: str):
     return DATA_BY_FILENAME
 
 
+
 generate_well_id_by_file_name_dict(os.getcwd() + '\influx_api\pkg\LUN-A.xlsx')
 generate_param_by_filename_dict(os.getcwd() + '\influx_api\pkg\LUN-A.xlsx')

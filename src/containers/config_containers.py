@@ -29,31 +29,35 @@ class RequestModelContainer(containers.DeclarativeContainer):
     FULL_BUCKET_NAME = os.getenv('FULL_BUCKET_NAME')
     request_model_manager = providers.Factory(
         RequestModelConfig,
-        FULL_DATA_BY_TAG=f'from(bucket: "{FULL_BUCKET_NAME}") '
-                          '|> range(start: -5y)'
-                          '|> filter(fn: (r) => r._measurement == "{:0}" and r["{:1}"] == "{:2}")',
-        DATA_FOR_RANGE_BY_TAG=f'from(bucket: "{FULL_BUCKET_NAME}") '
+        DATA_FOR_VALIDATE=f'from(bucket: "{FULL_BUCKET_NAME}") '
                           '|> range(start: {:0}, stop: {:1})'
                           '|> filter(fn: (r) => r._measurement == "{:2}")'
                           '|> filter(fn: (r) => r.name_ind == "Расход по воде Вентури" or '
                               'r.name_ind == "Расход по газу Вентури" or '
                               'r.name_ind == "Расход по конденсату Вентури")',
-
-        DATA_BEFORE_DATE=f'from(bucket: "{FULL_BUCKET_NAME}") '
-                          '|> range(start: -5y, stop: {:0})'
-                          '|> filter(fn: (r) => r._measurement == "{:1}" and r["{:2}"] == "{:3}")',
-        DATA_AFTER_DATE=f'from(bucket: "{FULL_BUCKET_NAME}") '
-                          '|> range(start: {:0})'
-                          '|> filter(fn: (r) => r._measurement == "{:1}" and r["{:2}"] == "{:3}")',
-        WRITE_IN_TAG_BY_DATE='',
-        OBJECTS_BY_MODEL_ID='from(bucket: "{bucket}")'
-                              '|> range(start: -1y)'
-                              '|> filter(fn: (r) => r._measurement == "{measurement}")'
-                              '|> limit(n: 1)',
-        DATA_BY_DATE=f'from(bucket: "{FULL_BUCKET_NAME}") '
+        DATA_FOR_ADAPT_BY_RANGE=f'from(bucket: "{FULL_BUCKET_NAME}") '
                           '|> range(start: {:0}, stop: {:1})'
-                          '|> filter(fn: (r) => r._measurement == "{:2}")'
+                          '|> filter(fn: (r) => r._measurement == "{:2}" or r._measurement == "ТЛ1 Манифольд")'
                           '|> filter(fn: (r) => r.name_ind == "Расход по воде Вентури" or '
                               'r.name_ind == "Расход по газу Вентури" or '
-                              'r.name_ind == "Расход по конденсату Вентури")'
+                              'r.name_ind == "Расход по конденсату Вентури" or '
+                              'r.name_ind == "Давление над буферной задвижкой ФА" or '
+                              'r.name_ind == "Процент открытия штуцера" or '
+                              'r.name_ind == "Температура на выкидной линии" or '
+                              'r.name_ind == "Давление" or '
+                              'r.name_ind == "Температура на трубке Вентури")',
+        DATA_FOR_FMM_BY_TIME_POINT =f'from(bucket: "{FULL_BUCKET_NAME}") '
+                          '|> range(start: {:0}, stop: {:1})'
+                          '|> filter(fn: (r) => r._measurement == "{:2}" or r._measurement == "ТЛ1 Манифольд")'
+                          '|> filter(fn: (r) => r.name_ind == "Расход по воде Вентури" or ' 
+                              'r.name_ind == "Расход по газу Вентури" or ' 
+                              'r.name_ind == "Расход по конденсату Вентури" or ' 
+                              'r.name_ind == "Давление над буферной задвижкой ФА" or ' 
+                              'r.name_ind == "Процент открытия штуцера" or ' 
+                              'r.name_ind == "Температура на выкидной линии" or ' 
+                              'r.name_ind == "Давление" or ' 
+                              'r.name_ind == "Температура на трубке Вентури")'
+                          '|> sort(columns: ["_time"], desc: false)'
+                          '|> limit(n: 1)'
     )
+

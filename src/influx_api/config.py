@@ -11,13 +11,9 @@ class InfluxDBConfig(BaseSettings):
 
 
 class RequestModelConfig(BaseSettings):
-    FULL_DATA_BY_TAG: str = Field(...)
-    DATA_FOR_RANGE_BY_TAG: str = Field(...)
-    DATA_BEFORE_DATE: str = Field(...)
-    DATA_AFTER_DATE: str = Field(...)
-    WRITE_IN_TAG_BY_DATE: str = Field(...)
-    OBJECTS_BY_MODEL_ID: str = Field(...)
-    DATA_BY_DATE: str = Field(...)
+    DATA_FOR_ADAPT_BY_RANGE: str = Field(...)
+    DATA_FOR_VALIDATE: str = Field(...)
+    DATA_FOR_FMM_BY_TIME_POINT: str = Field(...)
 
 
 class RequestObjectConfig(BaseSettings):
