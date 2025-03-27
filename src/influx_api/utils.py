@@ -17,7 +17,7 @@ def check_type_doc_by_filename(filename: str) -> str | UUID:
         if filename in i[1]:
             return i[0]
     else:
-        return uuid4()
+        return filename
 
 
 def check_well_id_by_filename(filename: str) -> str | UUID:
@@ -25,7 +25,7 @@ def check_well_id_by_filename(filename: str) -> str | UUID:
         if filename in i[1]:
             return i[0]
     else:
-        return uuid4()
+        return filename
 
 
 def check_file_type(file: UploadFile):
@@ -95,6 +95,7 @@ def convert_tsdb_validate_response(response: list):
 
 
 def convert_tsdb_adapt_response(response: list):
+
     processed_data = {
           "gamma_gas": 0.7, #Относительная плотность газа
           "gamma_gc": 0.86, #Относительная плотность газаконденсата

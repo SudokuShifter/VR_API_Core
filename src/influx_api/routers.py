@@ -37,12 +37,11 @@ router = APIRouter()
 async def fill_influx(
         csv_service: CSVService,
         influx_service: InfluxDBService,
-        file_or_archive: UploadFile = File(..., description="CSV file or archive (zip/rar)"),
-        model_id: int | str = Query(..., description='ID модели'),
+        file_or_archive: UploadFile = File(..., description="CSV file or archive (zip/rar)")
 ):
     point = check_file_type(file_or_archive)
     csv_service.save_file(file_or_archive)
-    tasks = BackgroundTask(influx_service.fill_data, point, file_or_archive, model_id)
+    tasks = BackgroundTask(influx_service.fill_data, point, file_or_archive)
     return JSONResponse({'status': 'in progress'},200, background=tasks)
 
 
@@ -108,10 +107,9 @@ async def get_data_for_fmm_by_time_point(
         date_start: datetime = Query(..., description="2021-01-01T00:00:00Z"),
         well_id: str = Query(..., description='ID модели')
 ):
-    date_end = (date_start + timedelta(minutes=1)).strftime('%Y-%m-%dT%H:%M:%SZ')
+    date_end = (date_start + timedelta(minutes=30)).strftime('%Y-%m-%dT%H:%M:%SZ')
     date_start = date_start.strftime('%Y-%m-%dT%H:%M:%SZ')
     data = await influx_request_manager.get_data_for_fmm_by_time_point(
         date_start, date_end, well_id
     )
     return convert_tsdb_fmm_response(data)
-
