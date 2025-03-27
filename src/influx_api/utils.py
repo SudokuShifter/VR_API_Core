@@ -173,3 +173,67 @@ def convert_tsdb_fmm_response(response: list):
                     processed_data['q_wat'] = record.get_value()
 
     return processed_data
+
+
+def convert_tsdb_ml_response(response: list):
+    processed_data = {
+          "Давление": [],
+          "Давление забойное": [],
+          "Давление над буферной задвижкой ФА": [],
+          "Процент открытия штуцера": [],
+          "Температура на выкидной линии": [],
+          "Температура": [],
+          "Температура забойная": [],
+        }
+    for table in response:
+        for record in table.records:
+            record_name = record.values.get('name_ind')
+            if isinstance(record.get_value(), (int, float)):
+                if record_name == "Давление":
+                    processed_data['Давление'].append(record.get_value())
+                elif record_name == "Давление забойное":
+                    processed_data['Давление забойное'].append(record.get_value())
+                elif record_name == "Давление над буферной задвижкой ФА":
+                    processed_data['Давление над буферной задвижкой ФА'].append(record.get_value())
+                elif record_name == "Процент открытия штуцера":
+                    processed_data['Процент открытия штуцера'].append(record.get_value())
+                elif record_name == "Температура на выкидной линии":
+                    processed_data['Температура на выкидной линии'].append(record.get_value())
+                elif record_name == "Температура":
+                    processed_data['Температура'].append(record.get_value())
+                elif record_name == "Температура забойная":
+                    processed_data['Температура забойная'].append(record.get_value())
+
+    return processed_data
+
+
+def convert_tsdb_ml_time_point_response(response: list):
+    processed_data = {
+        "Давление": None,
+        "Давление забойное": None,
+        "Давление над буферной задвижкой ФА": None,
+        "Процент открытия штуцера": None,
+        "Температура на выкидной линии": None,
+        "Температура": None,
+        "Температура забойная": None,
+    }
+    for table in response:
+        for record in table.records:
+            record_name = record.values.get('name_ind')
+            if isinstance(record.get_value(), (int, float)):
+                if record_name == "Давление":
+                    processed_data['Давление'] = record.get_value()
+                elif record_name == "Давление забойное":
+                    processed_data['Давление забойное'] = record.get_value()
+                elif record_name == "Давление над буферной задвижкой ФА":
+                    processed_data['Давление над буферной задвижкой ФА'] = record.get_value()
+                elif record_name == "Процент открытия штуцера":
+                    processed_data['Процент открытия штуцера'] = record.get_value()
+                elif record_name == "Температура на выкидной линии":
+                    processed_data['Температура на выкидной линии'] = record.get_value()
+                elif record_name == "Температура":
+                    processed_data['Температура'] = record.get_value()
+                elif record_name == "Температура забойная":
+                    processed_data['Температура забойная'] = record.get_value()
+
+    return processed_data

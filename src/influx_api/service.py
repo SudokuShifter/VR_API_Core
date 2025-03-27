@@ -235,16 +235,50 @@ class InfluxDBRequestManager(InfluxDBService):
 
     async def get_data_for_fmm_by_time_point(
             self,
-            date_start: str,
-            date_end: str,
+            time_left: str,
+            time_right: str,
             well_id: str
     ):
 
         result = await asyncio.to_thread(
             self.query_api.query,
             self.request_model_manager.DATA_FOR_FMM_BY_TIME_POINT.format(
-                date_start,
-                date_end,
+                time_left,
+                time_right,
+                well_id
+            )
+        )
+        return result
+
+
+    async def get_data_for_ml_by_range(
+            self,
+            time_left: str,
+            time_right: str,
+            well_id: str,
+    ):
+        result = await asyncio.to_thread(
+            self.query_api.query,
+            self.request_model_manager.DATA_FOR_ML_BY_RANGE.format(
+                time_left,
+                time_right,
+                well_id
+            )
+        )
+        return result
+
+
+    async def get_data_for_ml_by_time_point(
+            self,
+            time_left: str,
+            time_right: str,
+            well_id: str,
+    ):
+        result = await asyncio.to_thread(
+            self.query_api.query,
+            self.request_model_manager.DATA_FOR_FMM_BY_TIME_POINT.format(
+                time_left,
+                time_right,
                 well_id
             )
         )

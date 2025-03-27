@@ -58,5 +58,27 @@ class RequestModelContainer(containers.DeclarativeContainer):
                               'r.name_ind == "Давление" or ' 
                               'r.name_ind == "Температура на трубке Вентури")'
                           '|> sort(columns: ["_time"], desc: false)'
-                          '|> limit(n: 1)'
+                          '|> limit(n: 1)',
+        DATA_FOR_ML_BY_RANGE = f'from(bucket: "{FULL_BUCKET_NAME}") '
+                          '|> range(start: {:0}, stop: {:1})'
+                          '|> filter(fn: (r) => r._measurement == "{:2}" or r._measurement == "ТЛ1 Манифольд")'
+                          '|> filter(fn: (r) => r.name_ind == "Давление" or '
+                              'r.name_ind == "Давление забойное" or '
+                              'r.name_ind == "Давление над буферной задвижкой ФА" or '
+                              'r.name_ind == "Процент открытия штуцера" or '
+                              'r.name_ind == "Температура на выкидной линии" or '
+                              'r.name_ind == "Температура" or '
+                              'r.name_ind == "Температура забойная")',
+        DATA_FOR_ML_BY_TIME_POINT=f'from(bucket: "{FULL_BUCKET_NAME}") '
+                                   '|> range(start: {:0}, stop: {:1})'
+                                   '|> filter(fn: (r) => r._measurement == "{:2}" or r._measurement == "ТЛ2 Манифольд")'
+                                   '|> filter(fn: (r) => r.name_ind == "Давление" or '
+                              'r.name_ind == "Давление забойное" or '
+                              'r.name_ind == "Давление над буферной задвижкой ФА" or '
+                              'r.name_ind == "Процент открытия штуцера" or '
+                              'r.name_ind == "Температура на выкидной линии" or '
+                              'r.name_ind == "Температура" or '
+                              'r.name_ind == "Температура забойная") '
+                                   '|> sort(columns: ["_time"], desc: false)'
+                                   '|> limit(n: 1)',
     )

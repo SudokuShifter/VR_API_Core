@@ -14,7 +14,8 @@ class RequestModelConfig(BaseSettings):
     DATA_FOR_ADAPT_BY_RANGE: str = Field(...)
     DATA_FOR_VALIDATE: str = Field(...)
     DATA_FOR_FMM_BY_TIME_POINT: str = Field(...)
-
+    DATA_FOR_ML_BY_RANGE: str = Field(...)
+    DATA_FOR_ML_BY_TIME_POINT: str = Field(...)
 
 class RequestObjectConfig(BaseSettings):
     TOTAL_QUERY: str = Field(...)
