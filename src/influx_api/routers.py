@@ -140,11 +140,12 @@ async def get_data_for_fmm_by_range(
 async def get_data_for_fmm_by_range(
         influx_request_manager: InfluxDBRequestManager,
         date_start: datetime = Query(..., description="2021-01-01T00:00:00Z"),
-        well_id: str = Query(..., description='ID модели')
+        well_id: str = Query(..., description='ID модели'),
 ):
-    date_end = (date_start + timedelta(minutes=30)).strftime('%Y-%m-%dT%H:%M:%SZ')
+    date_end = (date_start + timedelta(days=1)).strftime('%Y-%m-%dT%H:%M:%SZ')
     date_start = date_start.strftime('%Y-%m-%dT%H:%M:%SZ')
     data = await influx_request_manager.get_data_for_ml_by_time_point(
         date_start, date_end, well_id
     )
+
     return convert_tsdb_ml_time_point_response(data)

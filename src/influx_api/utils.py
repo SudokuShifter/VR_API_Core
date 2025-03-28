@@ -117,7 +117,7 @@ def convert_tsdb_adapt_response(response: list):
             if isinstance(record.get_value(), (int, float)):
                 if record_name == "Процент открытия штуцера":
                     processed_data['d_choke_percent_timed'].append(record.get_value())
-                    processed_data['timestamp'].append(record.values.get("_time"))
+                    processed_data['timestamp'].append(record.values.get("_time").strftime('%Y-%m-%dT%H:%M:%S'))
                 elif record_name == "Давление":
                     processed_data['p_out_timed'].append(record.get_value())
                 elif record_name == "Давление над буферной задвижкой ФА":

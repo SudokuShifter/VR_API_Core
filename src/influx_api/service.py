@@ -276,7 +276,7 @@ class InfluxDBRequestManager(InfluxDBService):
     ):
         result = await asyncio.to_thread(
             self.query_api.query,
-            self.request_model_manager.DATA_FOR_FMM_BY_TIME_POINT.format(
+            self.request_model_manager.DATA_FOR_ML_BY_TIME_POINT.format(
                 time_left,
                 time_right,
                 well_id

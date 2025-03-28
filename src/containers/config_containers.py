@@ -48,7 +48,7 @@ class RequestModelContainer(containers.DeclarativeContainer):
                               'r.name_ind == "Температура на трубке Вентури")',
         DATA_FOR_FMM_BY_TIME_POINT =f'from(bucket: "{FULL_BUCKET_NAME}") '
                           '|> range(start: {:0}, stop: {:1})'
-                          '|> filter(fn: (r) => r._measurement == "{:2}" or r._measurement == "ТЛ2 Манифольд")'
+                          '|> filter(fn: (r) => r._measurement == "{:2}" or r._measurement == "ТЛ1 Манифольд")'
                           '|> filter(fn: (r) => r.name_ind == "Расход по воде Вентури" or ' 
                               'r.name_ind == "Расход по газу Вентури" or ' 
                               'r.name_ind == "Расход по конденсату Вентури" or ' 
